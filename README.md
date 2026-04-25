@@ -16,8 +16,9 @@ The main contributions of this work include a blockchain-based AI provenance fra
 2. **Real-time Threat Mitigation:** To detect and automatically neutralize AI-specific cyber threats (e.g., model extraction, API abuse) utilizing machine learning classification algorithms.
 3. **Cryptographic Integrity & E2EE:** To secure sensitive financial telemetry using a Zero-Trust communication model (RSA-PSS signatures + AES-GCM encryption).
 4. **High-Fidelity KYC & Identity:** To establish verifiable, region-aware identity assurance (Aadhaar, SSN, Passport) anchored to the blockchain.
-5. **Autonomous Mitigation:** To detect and automatically neutralize AI-specific cyber threats (e.g., model extraction, API abuse) utilizing machine learning classification algorithms.
-6. **Comprehensive Auditing:** To provide a transparent, tamper-proof security monitoring interface for system administrators and forensic analysis.
+5. **Zero-Trust Session Hardening:** To implement strict temporal access control via 15-minute inactivity timeouts and "Logout-on-Refresh" policies to prevent session hijacking.
+6. **Global Financial Localization:** To support multi-currency banking (INR, USD, EUR, GBP) with region-specific utility bill processing (Electricity, Gas, Water).
+7. **Comprehensive Auditing:** To provide a transparent, tamper-proof security monitoring interface for system administrators and forensic analysis.
 
 ---
 

@@ -142,6 +142,29 @@ where $x$ represents the current transaction amount, $\mu$ represents the user's
 *   **Time-of-Day Anomaly**: Temporal analysis of user behavior.
 *   **Request Duration Entropy**: Detection of Slowloris-style low-and-slow attacks via session duration variance.
 *   **Behavioral Biometrics Score**: ML profiling of typing speed and interaction entropy.
+*   **Session Temporal Entropy**: Monitoring of session duration vs. activity to enforce 15-minute auto-expiry and prevent idle session exploitation.
+
+---
+
+## Premium Financial Modules
+
+### 1. Global Currency Engine
+The Bank Portal is powered by a dynamic localization engine that supports:
+*   **Multi-Currency Logic**: Real-time rendering of **INR (₹)**, **USD ($)**, **EUR (€)**, and **GBP (£)** based on account metadata.
+*   **Region-Specific KYC**: Automated document type selection (Aadhaar for INR, SSN for USD, Passport for others).
+*   **Dynamic UI Feedback**: Real-time currency symbol updates in deposit/withdrawal forms for absolute user clarity.
+
+### 2. Utility Bill Processing
+The system features an expanded bill payment framework categorized by utility type:
+*   **Electricity (Light Bill)**, **MGL Gas Bill**, **Water Bill**.
+*   **Connectivity**: Broadband, Internet, and Mobile Postpaid.
+*   **Risk-Verified Payments**: Every bill payment is scanned by the AI Risk Engine and logged on the Ethereum ledger.
+
+### 3. Hardened Session Security
+To mitigate the risk of unauthorized access on shared devices, the system implements:
+*   **Volatile Session Model**: Any manual page refresh (F5) or browser reload instantly invalidates the JWT session, forcing a secure re-login.
+*   **15-Minute Inactivity Guard**: An autonomous background timer that terminates sessions after 15 minutes of inactivity.
+*   **COOP Hardening**: `Cross-Origin-Opener-Policy` (same-origin-allow-popups) is enforced at the gateway layer to protect authentication flows from cross-site leaks.
 
 ---
 
