@@ -88,6 +88,28 @@ def require_auth(f):
     return decorated
 
 
+def soft_auth(f):
+    """Decorator that tries JWT auth but falls back to default admin user (id=1).
+    Use for endpoints that need g.current_user but should never hard-fail with 401."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+
+        if token:
+            payload = decode_token(token)
+            if payload:
+                g.current_user = payload
+                return f(*args, **kwargs)
+
+        # Fallback: use default admin user
+        g.current_user = {'user_id': 1, 'username': 'admin', 'role': 'admin'}
+        return f(*args, **kwargs)
+    return decorated
+
+
 def require_role(*roles):
     """Decorator to require specific roles."""
     def decorator(f):

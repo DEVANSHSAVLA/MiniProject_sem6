@@ -7,6 +7,18 @@ const BankPage = {
     beneficiaries: [],
     activeTab: 'overview',
 
+    formatCurrency(amount, currency = 'USD') {
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 2
+            }).format(amount);
+        } catch (e) {
+            return `${currency} ${Number(amount).toFixed(2)}`;
+        }
+    },
+
     async render() {
         const content = document.getElementById('content');
         content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Synchronizing with Banking Ledger...</p></div>';
@@ -100,9 +112,9 @@ const BankPage = {
                             <div class="form-group"><label class="form-label">Action</label>
                                 <select id="fund-type" class="form-input" required><option value="deposit">DEPOSIT</option><option value="withdraw">WITHDRAW</option></select>
                             </div>
-                            <div class="form-group"><label class="form-label">Amount ($)</label>
-                                <div style="position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);">$</span>
-                                <input type="number" id="fund-amount" class="form-input" style="padding-left:25px;" placeholder="0.00" min="0.01" step="0.01" required></div>
+                            <div class="form-group"><label class="form-label">Amount</label>
+                                <div style="position:relative;">
+                                <input type="number" id="fund-amount" class="form-input" style="padding-left:15px;" placeholder="0.00" min="0.01" step="0.01" required></div>
                             </div>
                             <div class="form-group"><label class="form-label">Description / Note</label>
                                 <input type="text" id="fund-description" class="form-input" placeholder="e.g. Salary deposit, ATM withdrawal" maxlength="200">
@@ -120,9 +132,9 @@ const BankPage = {
                                 <input type="text" id="transfer-to" class="form-input" placeholder="Enter account number" required>
                                 <div id="beneficiary-quick" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;"></div>
                             </div>
-                            <div class="form-group"><label class="form-label">Amount ($)</label>
-                                <div style="position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);">$</span>
-                                <input type="number" id="transfer-amount" class="form-input" style="padding-left:25px;" placeholder="0.00" min="0.01" step="0.01" required></div>
+                            <div class="form-group"><label class="form-label">Amount</label>
+                                <div style="position:relative;">
+                                <input type="number" id="transfer-amount" class="form-input" style="padding-left:15px;" placeholder="0.00" min="0.01" step="0.01" required></div>
                             </div>
                             <div class="form-group"><label class="form-label">Transfer Note / Reference</label>
                                 <input type="text" id="transfer-description" class="form-input" placeholder="e.g. Rent payment, Invoice #1234" maxlength="200">
@@ -139,14 +151,19 @@ const BankPage = {
                         <div class="form-group"><label class="form-label">Account</label><select id="bill-account" class="form-input" required></select></div>
                         <div class="form-group"><label class="form-label">Category</label>
                             <select id="bill-category" class="form-input" required>
-                                <option value="electricity">⚡ Electricity</option><option value="water">💧 Water</option><option value="gas">🔥 Gas</option>
-                                <option value="internet">🌐 Internet</option><option value="mobile">📱 Mobile</option><option value="insurance">🛡️ Insurance</option>
+                                <option value="electricity">⚡ Light Bill (Electricity)</option>
+                                <option value="water">💧 Water Bill</option>
+                                <option value="gas">🔥 MGL Gas Bill</option>
+                                <option value="internet">🌐 Broadband / Internet</option>
+                                <option value="mobile">📱 Mobile Postpaid</option>
+                                <option value="insurance">🛡️ Insurance Premium</option>
+                                <option value="other">🧾 Other Bills</option>
                             </select>
                         </div>
                         <div class="form-group"><label class="form-label">Provider</label><input type="text" id="bill-provider" class="form-input" placeholder="Provider name" required></div>
-                        <div class="form-group"><label class="form-label">Amount ($)</label>
-                            <div style="position:relative;"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);">$</span>
-                            <input type="number" id="bill-amount" class="form-input" style="padding-left:25px;" placeholder="0.00" min="0.01" step="0.01" required></div>
+                        <div class="form-group"><label class="form-label">Amount</label>
+                            <div style="position:relative;">
+                            <input type="number" id="bill-amount" class="form-input" style="padding-left:15px;" placeholder="0.00" min="0.01" step="0.01" required></div>
                         </div>
                         <button type="submit" class="btn btn-primary" style="height:42px;">Pay Bill</button>
                     </form>
@@ -178,6 +195,26 @@ const BankPage = {
                     </div>
                     <div id="transaction-history" style="max-height: 500px; overflow-y: auto;">
                         <div class="loading-spinner" style="padding: 40px;"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- SOC Attack Simulator & Terminal -->
+                <div class="card animate-in stagger-6" style="padding: 0; overflow: hidden; margin-bottom: 35px; border-color: var(--color-danger);">
+                    <div class="card-header" style="padding: 22px 22px 14px; background: rgba(239, 68, 68, 0.05); border-bottom: 1px solid rgba(239, 68, 68, 0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div>
+                                <div class="card-title" style="color: var(--color-danger);">🚨 SOC Attack Simulator</div>
+                                <div class="card-subtitle">Trigger simulated threats to verify the AI Security Engine & Active Defense modules.</div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-outline" style="border-color: var(--color-warning); color: var(--color-warning);" onclick="BankPage.triggerSimulatedAttack('brute_force')">Simulate Credential Stuffing</button>
+                                <button class="btn btn-primary" style="background: var(--color-danger); border-color: var(--color-danger);" onclick="BankPage.triggerSimulatedAttack('dos')">Simulate DDoS / Tar-Pit</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding: 15px; background: #000; color: #0f0; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; height: 300px; overflow-y: auto;" id="bank-soc-terminal">
+                        <div>> [SOC_TERMINAL] Waiting for telemetry...</div>
+                        <div>> [SOC_TERMINAL] AI Risk Engine ACTIVE. Adaptive Defense ACTIVE.</div>
                     </div>
                 </div>
             </div>
@@ -227,7 +264,7 @@ const BankPage = {
 
             <!-- Open Account Modal -->
             <div id="open-account-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
-                <div class="card" style="max-width:480px; width:92%; padding:0; border:1px solid var(--accent-primary); box-shadow:0 0 60px rgba(99,102,241,0.2); overflow:hidden;">
+                <div class="card" style="max-width:480px; width:92%; padding:0; border:1px solid var(--accent-primary); box-shadow:0 0 60px rgba(99,102,241,0.2); overflow:hidden; max-height:90vh; display:flex; flex-direction:column;">
                     <div style="padding:24px 24px 16px; border-bottom:1px solid var(--glass-border); display:flex; align-items:center; gap:14px;">
                         <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(6,182,212,0.15));display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🏦</div>
                         <div>
@@ -235,7 +272,7 @@ const BankPage = {
                             <div style="font-size:0.7rem; color:var(--text-muted);">Blockchain-verified account creation with AI security</div>
                         </div>
                     </div>
-                    <form id="open-account-form" style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+                    <form id="open-account-form" style="padding:20px 24px; display:flex; flex-direction:column; gap:16px; overflow-y:auto;">
                         <!-- Step 1: Account Info -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                             <div class="form-group">
@@ -286,11 +323,34 @@ const BankPage = {
                         </div>
 
                         <!-- Step 3: Contact Verification -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="new-account-email" class="form-input" placeholder="email@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Mobile Number</label>
+                                <input type="tel" id="new-account-phone" class="form-input" placeholder="e.g. 9876543210" required>
+                            </div>
+                        </div>
+
                         <div class="form-group">
-                            <label class="form-label">Verification Email</label>
+                            <label class="form-label">Mobile Carrier (for Free SMS Gateway)</label>
                             <div style="display:flex; gap:8px;">
-                                <input type="email" id="new-account-email" class="form-input" style="flex:1;" placeholder="email@example.com" required>
-                                <button type="button" id="btn-send-otp" class="btn btn-outline btn-sm" style="padding:0 12px; white-space:nowrap;">Send OTP</button>
+                                <select id="new-account-carrier" class="form-input" style="flex:1;">
+                                    <optgroup label="India">
+                                        <option value="airtelmail.com">Airtel</option>
+                                        <option value="jio.com">Jio</option>
+                                        <option value="vmpix.com">VI (Vodafone Idea)</option>
+                                    </optgroup>
+                                    <optgroup label="USA">
+                                        <option value="vtext.com">Verizon</option>
+                                        <option value="tmomail.net">T-Mobile</option>
+                                        <option value="txt.att.net">AT&T</option>
+                                    </optgroup>
+                                    <option value="custom">Custom Gateway Domain...</option>
+                                </select>
+                                <button type="button" id="btn-send-otp" class="btn btn-primary btn-sm" style="padding:0 16px; white-space:nowrap; border-radius:var(--radius-md);">Send OTP Bundle</button>
                             </div>
                         </div>
                         <div id="otp-section" style="display:none;" class="form-group animate-in">
@@ -380,7 +440,7 @@ const BankPage = {
                     <div id="prev-hash-val" style="background:rgba(0,0,0,0.2); padding:8px; border-radius:6px; word-break:break-all; color:var(--text-muted); font-size:0.7rem; border:1px solid rgba(255,255,255,0.03); letter-spacing:3px; transition:all 0.3s;">${'*'.repeat(64)}</div>
                 </div>
                 ${tx ? `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; padding-top:10px; border-top:1px solid var(--glass-border);">
-                    <div><div style="color:var(--text-muted); font-size:0.65rem; margin-bottom:3px;">AMOUNT</div><div style="font-weight:700; color:var(--text-primary);">$${tx.amount?.toFixed(2)}</div></div>
+                    <div><div style="color:var(--text-muted); font-size:0.65rem; margin-bottom:3px;">AMOUNT</div><div style="font-weight:700; color:var(--text-primary);">${BankPage.formatCurrency(tx.amount, tx.currency || 'USD')}</div></div>
                     <div><div style="color:var(--text-muted); font-size:0.65rem; margin-bottom:3px;">TYPE</div><div style="font-weight:600; text-transform:uppercase; color:var(--text-primary);">${tx.type}</div></div>
                     <div><div style="color:var(--text-muted); font-size:0.65rem; margin-bottom:3px;">STATUS</div><div style="font-weight:600; text-transform:uppercase; color:${tx.status==='completed'?'var(--color-success)':'var(--color-danger)'}">${tx.status}</div></div>
                 </div>` : ''}
@@ -467,7 +527,7 @@ const BankPage = {
                     </div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:0.95rem; font-weight:700; color:${amtColor};">${isOut ? '-' : '+'}$${t.amount.toFixed(2)}</div>
+                    <div style="font-size:0.95rem; font-weight:700; color:${amtColor};">${isOut ? '-' : '+'}${BankPage.formatCurrency(t.amount, t.currency || 'USD')}</div>
                     <div style="font-size:0.6rem; color:var(--text-muted);">${new Date(t.created_at).toLocaleDateString()}</div>
                 </div>
             </div>`;
@@ -518,7 +578,7 @@ const BankPage = {
                 </div>
                 <div>
                     <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:3px;">Available Balance</div>
-                    <div style="font-size:1.8rem; font-weight:700; color:var(--text-primary);">$${acc.balance.toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+                    <div style="font-size:1.8rem; font-weight:700; color:var(--text-primary);">${BankPage.formatCurrency(acc.balance, acc.currency)}</div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                         <span style="font-size:0.75rem; color:var(--text-muted);">${acc.currency}</span>
                         <span style="font-size:0.55rem; background:rgba(16,185,129,0.1); color:var(--color-success); padding:3px 8px; border-radius:10px; font-weight:600;">AI SECURED</span>
@@ -606,7 +666,7 @@ const BankPage = {
     updateSelects() {
         const selects = ['fund-account', 'transfer-from', 'bill-account'];
         const opts = this.accounts.filter(a => a.status === 'active').map(a =>
-            `<option value="${a.id}">${a.account_type.toUpperCase()} - ${a.account_number} ($${a.balance.toFixed(2)})</option>`
+            `<option value="${a.id}">${a.account_type.toUpperCase()} - ${a.account_number} (${this.formatCurrency(a.balance, a.currency)})</option>`
         ).join('');
         selects.forEach(id => {
             const el = document.getElementById(id);
@@ -631,20 +691,27 @@ const BankPage = {
         // OTP Verification Flow
         document.getElementById('btn-send-otp')?.addEventListener('click', async () => {
             const email = document.getElementById('new-account-email').value;
+            const phone = document.getElementById('new-account-phone').value;
+            const gateway = document.getElementById('new-account-carrier').value;
+
             if (!email || !email.includes('@')) { Toast.error('Please enter a valid email.'); return; }
+            if (!phone || phone.length < 10) { Toast.error('Please enter a valid phone number.'); return; }
             
             const btn = document.getElementById('btn-send-otp');
-            btn.disabled = true; btn.textContent = 'Sending...';
+            btn.disabled = true; btn.textContent = 'Wiring...';
             try {
                 const res = await API.request('/kyc/send-otp', {
                     method: 'POST',
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ 
+                        email, 
+                        phone, 
+                        gateway_domain: gateway === 'custom' ? prompt('Enter your carrier gateway domain (e.g. vtext.com):') : gateway
+                    })
                 });
                 Toast.success(res.message);
                 document.getElementById('otp-section').style.display = 'block';
-                if (res.demo_code) {
-                    console.log(`[KYC DEMO] OTP: ${res.demo_code}`);
-                    document.getElementById('new-account-otp').value = res.demo_code;
+                if (res.email_sent) {
+                    Toast.info('📧 Verification Bundle sent to Email & Phone!');
                 }
             } catch (err) { Toast.error(err.message); }
             finally { btn.textContent = 'Resend'; btn.disabled = false; }
@@ -704,7 +771,8 @@ const BankPage = {
                 const res = type === 'deposit'
                     ? await API.depositFunds(payload)
                     : await API.withdrawFunds(payload);
-                Toast.success(`${type === 'deposit' ? 'Deposited' : 'Withdrew'} $${amount.toFixed(2)}`);
+                const acc = BankPage.accounts.find(a => a.id == accountId);
+                Toast.success(`${type === 'deposit' ? 'Deposited' : 'Withdrew'} ${BankPage.formatCurrency(amount, acc?.currency || 'USD')}`);
                 if (res.blockchain_receipt) this.showReceipt(res.blockchain_receipt, res.transaction, res.ai_chain_guard);
                 e.target.reset();
                 this.loadAccounts();
@@ -778,7 +846,9 @@ const BankPage = {
             btn.disabled = true; btn.textContent = 'Paying...';
             try {
                 const res = await API.payBill({ account_id: accountId, amount, category, provider });
-                Toast.success(`${category} bill paid: $${amount.toFixed(2)}`);
+                const acc = BankPage.accounts.find(a => a.id == accountId);
+                const catLabel = document.getElementById('bill-category').selectedOptions[0].text;
+                Toast.success(`${catLabel} paid: ${BankPage.formatCurrency(amount, acc?.currency || 'USD')}`);
                 if (res.blockchain_receipt) this.showReceipt(res.blockchain_receipt, res.transaction, res.ai_chain_guard);
                 e.target.reset();
                 this.loadAccounts();
@@ -901,5 +971,59 @@ const BankPage = {
             a.href = url; a.download = `statement_${acc.account_number}.csv`; a.click();
             URL.revokeObjectURL(url);
         } catch (err) { Toast.error(err.message); }
+    },
+
+    // --- Attack Simulation Logic ---
+    async triggerSimulatedAttack(type) {
+        const terminal = document.getElementById('bank-soc-terminal');
+        const appendLog = (msg, color = '#0f0') => {
+            const time = new Date().toISOString().split('T')[1].substring(0, 12);
+            terminal.innerHTML += `<div style="color:${color}; margin-top: 4px;">[${time}] ${msg}</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+        };
+
+        const attackNames = {
+            'dos': 'Distributed Denial of Service (DDoS) Flood',
+            'brute_force': 'Credential Stuffing / Brute Force'
+        };
+
+        appendLog(`> INITIATING ATTACK: ${attackNames[type]}...`, '#fbbf24');
+        document.body.classList.add('glitch-active');
+        if (window.AudioSys) AudioSys.playAlarm();
+
+        setTimeout(() => document.body.classList.remove('glitch-active'), 1000);
+
+        try {
+            const endpoint = type === 'api_abuse' ? '/models/internal/weights' : '/security/stats';
+            const count = type === 'dos' ? 15 : 5;
+
+            appendLog(`> Sending ${count} malicious payloads to AI Security Engine...`, '#9ca3af');
+            
+            for (let i = 0; i < count; i++) {
+                setTimeout(async () => {
+                    try {
+                        const res = await fetch(`${API.BASE_URL}${endpoint}?_sim=${type}_${Date.now()}_${i}`, {
+                            headers: type === 'brute_force' ? { 'Authorization': 'Basic invalid' } : {}
+                        });
+                        if (res.status === 403 || res.status === 429) {
+                             appendLog(`> [DEFENSE_TRIGGERED] IP BLOCKED BY DYNAMIC FIREWALL (Status ${res.status})`, '#ef4444');
+                        } else {
+                             appendLog(`> Payload ${i+1}/${count} injected (Status ${res.status})`, '#6366f1');
+                        }
+                    } catch (e) {
+                        appendLog(`> Connection reset by peer (Mitigation Active)`, '#ef4444');
+                    }
+                }, i * 200);
+            }
+
+            setTimeout(() => {
+                appendLog(`> [AI_ALERT] Anomaly detected by Isolation Forest. Trust score degraded.`, '#ef4444');
+                appendLog(`> [ACTIVE_DEFENSE] Initiating Counter-Mitigation. IP Diverted to Tar-Pit Honeypot.`, '#fbbf24');
+                Toast.error(`🚨 ${attackNames[type]} detected by AI Engine!`, 5000);
+            }, (count * 200) + 500);
+
+        } catch (error) {
+            appendLog(`> ERROR: ${error.message}`, '#ef4444');
+        }
     }
 };

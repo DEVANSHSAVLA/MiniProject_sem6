@@ -1,96 +1,119 @@
 /**
- * Login Page
- * Animated login screen with glassmorphism card and particle background.
+ * Login & Signup Page
+ * Animated auth screen with glassmorphism card and particle background.
  */
 const LoginPage = {
+    mode: 'login', // 'login' or 'signup'
+    googleInitialized: false,
+
     render() {
+        const isLogin = this.mode === 'login';
+        
         return `
-        <div class="login-screen" id="login-screen">
-            <canvas id="login-particles" class="login-particles"></canvas>
-            <div class="login-container">
-                <div class="login-card">
-                    <div class="login-header">
-                        <div class="login-logo">
-                            <div class="login-logo-icon">
-                                <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
-                                    <path d="M14 2L24 8V20L14 26L4 20V8L14 2Z" stroke="url(#lg)" stroke-width="2" fill="none"/>
-                                    <path d="M14 6L20 10V18L14 22L8 18V10L14 6Z" fill="url(#lg)" opacity="0.3"/>
-                                    <circle cx="14" cy="14" r="3" fill="url(#lg)"/>
-                                    <defs><linearGradient id="lg" x1="4" y1="2" x2="24" y2="26">
-                                        <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/>
-                                    </linearGradient></defs>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="login-brand">AI Chain Guard</div>
-                                <div class="login-tagline">Blockchain Security System</div>
-                            </div>
+        <canvas id="login-particles" class="login-particles"></canvas>
+        <div class="login-container">
+            <div class="login-card animate-in">
+                <div class="login-header">
+                    <div class="login-logo">
+                        <div class="login-logo-icon">
+                            <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
+                                <path d="M14 2L24 8V20L14 26L4 20V8L14 2Z" stroke="url(#lg)" stroke-width="2" fill="none"/>
+                                <path d="M14 6L20 10V18L14 22L8 18V10L14 6Z" fill="url(#lg)" opacity="0.3"/>
+                                <circle cx="14" cy="14" r="3" fill="url(#lg)"/>
+                                <defs><linearGradient id="lg" x1="4" y1="2" x2="24" y2="26">
+                                    <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#06b6d4"/>
+                                </linearGradient></defs>
+                            </svg>
                         </div>
-                        <h2 class="login-title">Welcome Back</h2>
-                        <p class="login-subtitle">Sign in to your secure dashboard</p>
+                        <div>
+                            <div class="login-brand">AI Chain Guard</div>
+                            <div class="login-tagline">Blockchain Security System</div>
+                        </div>
+                    </div>
+                    <h2 class="login-title">${isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+                    <p class="login-subtitle">${isLogin ? 'Sign in to your secure dashboard' : 'Join the decentralized security network'}</p>
+                </div>
+
+                <form id="auth-form" class="login-form">
+                    ${!isLogin ? `
+                    <div class="login-field">
+                        <label class="login-label">Full Name</label>
+                        <div class="login-input-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <input type="text" class="login-input" id="auth-fullname" placeholder="Enter your full name" required>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="login-field">
+                        <label class="login-label">Username/Email</label>
+                        <div class="login-input-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <input type="text" class="login-input" id="auth-username" placeholder="Username or email address" required>
+                        </div>
                     </div>
 
-                    <form id="login-form" class="login-form">
-                        <div class="login-field">
-                            <label class="login-label">Username</label>
-                            <div class="login-input-wrap">
+                    <div class="login-field">
+                        <label class="login-label">Password</label>
+                        <div class="login-input-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                            <input type="password" class="login-input" id="auth-password" placeholder="Enter password" required>
+                            <button type="button" class="login-eye" id="toggle-password">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                                 </svg>
-                                <input type="text" class="login-input" id="login-username" placeholder="Enter username" required>
-                            </div>
+                            </button>
                         </div>
-                        <div class="login-field">
-                            <label class="login-label">Password</label>
-                            <div class="login-input-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                                </svg>
-                                <input type="password" class="login-input" id="login-password" placeholder="Enter password" required>
-                                <button type="button" class="login-eye" id="toggle-password">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <button type="submit" class="login-btn" id="login-btn">
-                            <span class="login-btn-text">Sign In</span>
-                            <div class="login-btn-loader" id="login-loader"></div>
+                    </div>
+
+                    <button type="submit" class="login-btn" id="auth-btn">
+                        <span class="login-btn-text">${isLogin ? 'Sign In' : 'Register Now'}</span>
+                        <div class="login-btn-loader" id="auth-loader"></div>
+                    </button>
+                </form>
+
+                <div class="login-divider" style="margin:20px 0 16px;"><span>or continue with</span></div>
+                
+                <div id="google-btn-container" style="display:flex; justify-content:center; width:100%;">
+                    <!-- Google Button will be rendered here -->
+                    <div id="google-signin-btn"></div>
+                </div>
+
+                <div style="text-align:center; margin-top:20px; font-size:0.85rem; color:var(--text-muted);">
+                    ${isLogin ? "Don't have an account?" : "Already have an account?"}
+                    <a href="#" id="toggle-auth-mode" style="color:var(--accent-primary); font-weight:600; text-decoration:none; margin-left:5px;">
+                        ${isLogin ? 'Create Account' : 'Sign In'}
+                    </a>
+                </div>
+
+                ${isLogin ? `
+                <div class="login-footer">
+                    <div class="login-divider"><span>Demo Credentials</span></div>
+                    <div class="login-creds">
+                        <button type="button" class="cred-chip" onclick="LoginPage.fillCred('admin','admin123')">
+                            <span class="cred-role">Admin</span> admin
                         </button>
-                    </form>
-
-                    <div class="login-footer">
-                        <div class="login-divider"><span>Demo Credentials</span></div>
-                        <div class="login-creds">
-                            <button type="button" class="cred-chip" onclick="LoginPage.fillCred('admin','admin123')">
-                                <span class="cred-role">Admin</span>
-                                admin
-                            </button>
-                            <button type="button" class="cred-chip" onclick="LoginPage.fillCred('dr.chen','chen123')">
-                                <span class="cred-role">Researcher</span>
-                                dr.chen
-                            </button>
-                            <button type="button" class="cred-chip" onclick="LoginPage.fillCred('sarah_ml','sarah123')">
-                                <span class="cred-role">Researcher</span>
-                                sarah_ml
-                            </button>
-                        </div>
+                        <button type="button" class="cred-chip" onclick="LoginPage.fillCred('dr.chen','chen123')">
+                            <span class="cred-role">Researcher</span> dr.chen
+                        </button>
                     </div>
+                </div>
+                ` : ''}
 
-                    <div class="login-features">
-                        <div class="login-feature">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22S20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z"/></svg>
-                            <span>End-to-end encrypted</span>
-                        </div>
-                        <div class="login-feature">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                            <span>Blockchain verified</span>
-                        </div>
-                        <div class="login-feature">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7L12 12L22 7L12 2Z"/><path d="M2 17L12 22L22 17"/></svg>
-                            <span>AI-driven protection</span>
-                        </div>
+                <div class="login-features">
+                    <div class="login-feature">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22S20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z"/></svg>
+                        <span>E2EE Secure</span>
+                    </div>
+                    <div class="login-feature">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                        <span>Blockchain Verified</span>
                     </div>
                 </div>
             </div>
@@ -99,53 +122,120 @@ const LoginPage = {
     },
 
     init() {
-        const form = document.getElementById('login-form');
-        if (!form) return;
+        const container = document.getElementById('login-screen');
+        if (!container) return;
+        
+        container.innerHTML = this.render();
 
         // Particle background
         new ParticleSystem('login-particles');
 
+        // Toggle auth mode
+        document.getElementById('toggle-auth-mode')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.mode = this.mode === 'login' ? 'signup' : 'login';
+            this.init(); // Re-render and re-init
+        });
+
         // Toggle password visibility
         document.getElementById('toggle-password')?.addEventListener('click', () => {
-            const input = document.getElementById('login-password');
+            const input = document.getElementById('auth-password');
             input.type = input.type === 'password' ? 'text' : 'password';
         });
 
         // Form submit
-        form.addEventListener('submit', async (e) => {
+        const form = document.getElementById('auth-form');
+        form?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            const loader = document.getElementById('login-loader');
+            const btn = document.getElementById('auth-btn');
             btn.classList.add('loading');
 
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
 
             try {
-                const result = await API.login(username, password);
-                API.token = result.token;
-                localStorage.setItem('token', result.token);
-                localStorage.setItem('user', JSON.stringify(result.user));
-                Toast.success(`Welcome back, ${result.user.username}!`);
-
-                // Transition out
-                document.getElementById('login-screen').classList.add('login-exit');
-                setTimeout(() => {
-                    document.getElementById('login-screen')?.remove();
-                    document.querySelector('.app').style.display = 'flex';
-                    App.init();
-                }, 600);
+                let result;
+                if (this.mode === 'login') {
+                    result = await API.login(username, password);
+                } else {
+                    const fullName = document.getElementById('auth-fullname').value;
+                    result = await API.register(username, password, fullName);
+                    Toast.success('Account created successfully!');
+                }
+                this._completeLogin(result);
             } catch (error) {
-                Toast.error('Login failed: ' + error.message);
+                Toast.error((this.mode === 'login' ? 'Login' : 'Registration') + ' failed: ' + error.message);
                 btn.classList.remove('loading');
             }
         });
+
+        // Google Sign-In (Standard Button)
+        const initGoogle = () => {
+            if (window.googleInitialized) return;
+            if (typeof google === 'undefined' || !google.accounts) {
+                setTimeout(initGoogle, 200);
+                return;
+            }
+            
+            window.googleInitialized = true;
+            google.accounts.id.initialize({
+                client_id: '90338982833-i1sg24l3hoh1tl2ot2f659ufj9d06uek.apps.googleusercontent.com',
+                callback: (response) => this._handleGoogleResponse(response),
+                auto_select: false,
+                ux_mode: 'popup',
+                use_fedcm_for_prompt: false 
+            });
+
+            google.accounts.id.renderButton(
+                document.getElementById("google-signin-btn"),
+                { 
+                    theme: "outline", 
+                    size: "large", 
+                    width: document.querySelector('.login-card').offsetWidth - 80,
+                    text: this.mode === 'login' ? 'signin_with' : 'signup_with'
+                }
+            );
+        };
+        initGoogle();
+    },
+
+    async _handleGoogleResponse(response) {
+        try {
+            console.log("[AUTH] Google response received, verifying with backend...");
+            const result = await API.googleLogin(response.credential);
+            this._completeLogin(result);
+        } catch (error) {
+            console.error("[AUTH] Google login backend error:", error);
+            Toast.error('Google sign-in failed: ' + error.message);
+        }
+    },
+
+    _completeLogin(result) {
+        API.token = result.token;
+        const now = Date.now();
+        localStorage.setItem('token', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('login_time', now);
+        Toast.success(`Welcome, ${result.user.username}!`);
+
+        document.getElementById('login-screen').classList.add('login-exit');
+        setTimeout(() => {
+            document.getElementById('login-screen')?.remove();
+            document.querySelector('.app').style.display = 'flex';
+            App.setUser(result.user);
+            App.init();
+            App.startSessionTimer(15 * 60 * 1000); // 15 minutes
+        }, 600);
     },
 
     fillCred(user, pass) {
-        document.getElementById('login-username').value = user;
-        document.getElementById('login-password').value = pass;
-        document.getElementById('login-username').focus();
-        Toast.info(`Credentials filled for ${user}`);
+        const userInp = document.getElementById('auth-username');
+        const passInp = document.getElementById('auth-password');
+        if (userInp && passInp) {
+            userInp.value = user;
+            passInp.value = pass;
+            userInp.focus();
+            Toast.info(`Credentials filled for ${user}`);
+        }
     }
 };

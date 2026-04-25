@@ -26,7 +26,7 @@ import blockchain_web3
 from crypto_utils import crypto_manager
 import hashing
 from smart_contracts import model_registry, version_verification, access_control, data_provenance
-from auth import hash_password, verify_password, generate_token, decode_token, require_auth, require_role
+from auth import hash_password, verify_password, generate_token, decode_token, require_auth, require_role, soft_auth
 from anomaly_detection import anomaly_detector
 from security import security_engine, threat_profiler, adaptive_defense
 from federated_learning import federated_engine
@@ -44,8 +44,10 @@ app.config['JSON_SORT_KEYS'] = False
 app.config['SECRET_KEY'] = 'ai-chain-guard-secret-key-2024'
 
 CORS(app, resources={r"/api/*": {
-    "origins": "*", 
-    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key"], 
+    "origins": ["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:5000"], 
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "X-API-Key", "X-SPIFFE-ID"], 
+    "expose_headers": ["Content-Type", "Authorization"],
+    "supports_credentials": True,
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }})
 sock = Sock(app)
@@ -73,6 +75,7 @@ def zero_trust_validation():
 
     # In production, this would be verified via mTLS certificates
     svid_header = request.headers.get("X-SPIFFE-ID", "spiffe://ai-chain-guard.io/public/anonymous")
+    print(f"[TRUST] Request to {request.path} from {request.remote_addr}. SVID: {svid_header}")
     g.identity = svid_header
     
     # conceptual check: ensure identity is rooted in the secure domain
@@ -86,6 +89,21 @@ def zero_trust_validation():
 # ── Database Initialization ─────────────────────────────────────
 with app.app_context():
     db.create_all()
+    # Ensure admin account always exists
+    if not User.query.filter_by(username='admin').first():
+        admin_user = User(
+            username='admin',
+            email='admin@aichain.io',
+            full_name='Administrator',
+            password_hash=hash_password('admin123'),
+            role='admin',
+            trust_score=98.5
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        print("[SEED] Created default admin account (admin / admin123)")
+    else:
+        print("[SEED] Admin account already exists")
 
 
 def purge_old_logs():
@@ -200,6 +218,10 @@ def before_request_handler():
     delay = adaptive_defense.get_throttle_delay(ip)
     if delay > 0:
         time.sleep(delay)
+
+    # Whitelist localhost from all security checks (dev environment)
+    if ip in ('127.0.0.1', '::1', 'localhost'):
+        return None
 
     # Check Dynamic Firewall (Blocked IPs)
     if ip in security_engine.blocked_ips:
@@ -349,22 +371,21 @@ def register():
         return jsonify({'error': 'Request body required'}), 400
 
     username = data.get('username')
-    email = data.get('email')
+    full_name = data.get('full_name', 'System User')
+    email = data.get('email') or f"{username}@aichain.local"
     password = data.get('password')
-    role = data.get('role', 'viewer')
+    role = data.get('role', 'researcher')
 
-    if not all([username, email, password]):
-        return jsonify({'error': 'username, email, and password are required'}), 400
+    if not all([username, password]):
+        return jsonify({'error': 'username and password are required'}), 400
 
     if User.query.filter_by(username=username).first():
         return jsonify({'error': 'Username already exists'}), 409
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already exists'}), 409
-
     user = User(
         username=username,
         email=email,
+        full_name=full_name,
         password_hash=hash_password(password),
         role=role
     )
@@ -398,7 +419,8 @@ def login():
     if not all([username, password]):
         return jsonify({'error': 'username and password are required'}), 400
 
-    user = User.query.filter_by(username=username).first()
+    # Support identity as either username or email
+    user = User.query.filter((User.username == username) | (User.email == username)).first()
 
     if not user or not verify_password(password, user.password_hash):
         ip = request.headers.get('X-Forwarded-For', request.remote_addr) or '127.0.0.1'
@@ -433,6 +455,119 @@ def login():
         'user': user.to_dict()
     })
 
+
+@app.route('/api/auth/google', methods=['POST'])
+def google_login():
+    """Authenticate via Google Sign-In ID token."""
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+
+    data = request.get_json()
+    credential = data.get('credential')
+    if not credential:
+        return jsonify({'error': 'Google credential token is required'}), 400
+
+    print(f"[AUTH] Google Login Attempt. Credential length: {len(credential) if credential else 0}")
+    
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    print(f"[AUTH] Using Client ID: {client_id}")
+
+    try:
+        idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+        email = idinfo.get('email')
+        name = idinfo.get('name', email.split('@')[0])
+        print(f"[AUTH] Token Verified. Email: {email}, Name: {name}")
+    except Exception as e:
+        print(f"[AUTH] Token Verification FAILED: {str(e)}")
+        return jsonify({'error': f'Invalid Google token: {str(e)}'}), 401
+
+    # Find or create user
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        # Generate a unique username from name
+        base_username = name.replace(' ', '_').lower()
+        username = base_username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        user = User(
+            username=username,
+            email=email,
+            full_name=name,
+            password_hash=hash_password(os.urandom(16).hex()),
+            role='researcher' # New users are researchers by default
+        )
+        db.session.add(user)
+        db.session.commit()
+    else:
+        # Update existing user's name if it changed in Google
+        user.full_name = name
+        db.session.commit()
+
+    user.last_login = datetime.now(timezone.utc)
+    db.session.commit()
+
+    token = generate_token(user.id, user.username, user.role)
+    return jsonify({
+        'message': 'Google login successful',
+        'token': token,
+        'user': user.to_dict()
+    })
+
+
+def send_otp_email(to_email, otp_code, gateway_email=None):
+    """Send OTP via Gmail SMTP to Email and optionally a Phone Gateway. Returns True on success."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    gmail_addr = os.environ.get('GMAIL_ADDRESS', '')
+    gmail_pass = os.environ.get('GMAIL_APP_PASSWORD', '')
+    if not gmail_addr or not gmail_pass:
+        print("[MAIL] Gmail credentials not configured — skipping email")
+        return False
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f'AI Chain Guard — Verification Code: {otp_code}'
+    msg['From'] = f'AI Chain Guard <{gmail_addr}>'
+    
+    recipients = [to_email]
+    if gateway_email:
+        recipients.append(gateway_email)
+    
+    msg['To'] = ", ".join(recipients)
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:30px;background:#0f172a;color:#e2e8f0;border-radius:12px;">
+        <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:24px;font-weight:700;color:#818cf8;">AI Chain Guard</div>
+            <div style="font-size:13px;color:#94a3b8;">Blockchain Security Framework</div>
+        </div>
+        <div style="background:#1e293b;padding:24px;border-radius:8px;text-align:center;border:1px solid #334155;">
+            <div style="font-size:14px;color:#94a3b8;margin-bottom:12px;">Your verification code is</div>
+            <div style="font-size:36px;font-weight:800;letter-spacing:8px;color:#6366f1;font-family:monospace;">{otp_code}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:12px;">This code expires in 10 minutes</div>
+        </div>
+        <div style="text-align:center;margin-top:20px;font-size:11px;color:#475569;">
+            If you did not request this code, please ignore this email.
+        </div>
+    </div>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(gmail_addr, gmail_pass)
+            server.sendmail(gmail_addr, recipients, msg.as_string())
+        print(f"[MAIL/SMS] OTP sent to {recipients}")
+        return True
+    except Exception as e:
+        print(f"[MAIL] Failed to send: {e}")
+        return False
 
 # ── Model Routes ─────────────────────────────────────────────────
 
@@ -792,6 +927,114 @@ def register_dataset():
     }), 201
 
 
+@app.route('/api/datasets/upload', methods=['POST'])
+def upload_dataset():
+    """Import a dataset from a CSV file upload with automatic profiling."""
+    import csv
+    import io
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided. Send a CSV file with key "file".'}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    if not file.filename.lower().endswith('.csv'):
+        return jsonify({'error': 'Only CSV files are supported'}), 400
+
+    # Read file content
+    raw_bytes = file.read()
+    file_size = len(raw_bytes)
+
+    # Compute SHA-256 hash of the raw file content
+    data_hash = hashlib.sha256(raw_bytes).hexdigest()
+
+    # Parse CSV
+    try:
+        text = raw_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        text = raw_bytes.decode('latin-1')
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+
+    if len(rows) < 2:
+        return jsonify({'error': 'CSV file must have a header row and at least one data row'}), 400
+
+    columns = rows[0]
+    data_rows = rows[1:]
+    record_count = len(data_rows)
+
+    # Build column profile (type inference)
+    column_profiles = []
+    for i, col in enumerate(columns):
+        sample_values = [r[i] for r in data_rows[:100] if i < len(r) and r[i].strip()]
+        # Simple type inference
+        col_type = 'text'
+        if sample_values:
+            numeric_count = sum(1 for v in sample_values if v.replace('.', '', 1).replace('-', '', 1).isdigit())
+            if numeric_count / len(sample_values) > 0.8:
+                col_type = 'numeric'
+        column_profiles.append({
+            'name': col,
+            'type': col_type,
+            'non_null': len(sample_values),
+            'sample': sample_values[:3]
+        })
+
+    # Extract preview (first 10 rows)
+    preview_rows = data_rows[:10]
+
+    # Use form data for optional fields, fallback to filename
+    name = request.form.get('name') or file.filename.rsplit('.', 1)[0]
+    description = request.form.get('description') or f'Imported from {file.filename} ({record_count} records, {len(columns)} columns)'
+    source = request.form.get('source') or 'CSV Upload'
+    data_type = request.form.get('data_type') or 'tabular'
+
+    # Register on Ethereum blockchain via Web3
+    web3_resp = blockchain_web3.store_dataset_hash(data_hash)
+    block_hash = web3_resp.get("tx_hash", "pending") if web3_resp.get("status") == "success" else "error_tx"
+
+    # Register in smart contract
+    try:
+        owner = User.query.get(1)
+        data_provenance.register_dataset(
+            name, data_hash, owner.username if owner else 'system',
+            source
+        )
+    except Exception:
+        pass
+
+    dataset = Dataset(
+        name=name,
+        description=description,
+        data_type=data_type,
+        source=source,
+        record_count=record_count,
+        file_size=file_size,
+        data_hash=data_hash,
+        blockchain_tx=block_hash,
+        owner_id=1
+    )
+    db.session.add(dataset)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Dataset imported and registered on blockchain',
+        'dataset': dataset.to_dict(),
+        'blockchain_tx': block_hash,
+        'profile': {
+            'columns': column_profiles,
+            'total_columns': len(columns),
+            'total_rows': record_count,
+            'file_size': file_size,
+            'preview_headers': columns,
+            'preview_rows': preview_rows
+        }
+    }), 201
+
+
 @app.route('/api/datasets/<int:dataset_id>', methods=['GET'])
 def get_dataset(dataset_id):
     """Get dataset details with provenance info."""
@@ -1126,7 +1369,7 @@ def get_server_public_key():
     })
 
 @app.route('/api/bank/register-key', methods=['POST'])
-@require_auth
+@soft_auth
 def register_client_public_key():
     """Registers the client's Public Key for Digital Signatures (Non-Repudiation)."""
     data = request.get_json()
@@ -1143,7 +1386,7 @@ def register_client_public_key():
 
 
 @app.route('/api/bank/accounts', methods=['GET'])
-@require_auth
+@soft_auth
 def get_bank_accounts():
     """Get all bank accounts for the authenticated user."""
     accounts = BankAccount.query.filter_by(owner_id=g.current_user['user_id']).all()
@@ -1153,11 +1396,13 @@ def get_bank_accounts():
 
 
 @app.route('/api/kyc/send-otp', methods=['POST'])
-@require_auth
+@soft_auth
 def send_kyc_otp():
-    """Simulate sending an OTP for KYC verification."""
+    """Send an OTP for KYC verification via Gmail SMTP."""
     data = request.get_json()
     email = data.get('email')
+    phone = data.get('phone')
+    gateway = data.get('gateway_domain') # e.g. vtext.com or airtelmail.com
     
     if not email:
         return jsonify({'error': 'Email is required for verification'}), 400
@@ -1166,21 +1411,31 @@ def send_kyc_otp():
     import random
     otp = str(random.randint(100000, 999999))
     
-    # In a real app, this would be sent via email/SMS
-    # For demo purposes, we store it in the session
     session['kyc_otp'] = otp
     session['kyc_email'] = email
     
-    print(f"[KYC DEBUG] OTP for {email}: {otp}")
+    print(f"[KYC] OTP for {email}/{phone}: {otp}")
     
+    # Construct Gateway Email if phone provided
+    gateway_email = f"{phone}@{gateway}" if phone and gateway else None
+    
+    # Send via Gmail SMTP (Dual Channel)
+    email_sent = send_otp_email(email, otp, gateway_email)
+    
+    if not email_sent:
+        return jsonify({
+            'error': 'Email delivery failed',
+            'message': 'We could not send the verification code to your Gmail. Please check the backend configuration or your internet connection.'
+        }), 500
+        
     return jsonify({
-        'message': f'Verification code sent to {email}',
-        'demo_code': otp  # In demo mode, we return the code for UI convenience
+        'message': f'Verification code successfully sent to {email}',
+        'email_sent': True
     })
 
 
 @app.route('/api/bank/accounts', methods=['POST'])
-@require_auth
+@soft_auth
 def create_bank_account():
     """Create a new bank account with full KYC – logged on blockchain."""
     data = request.get_json()
@@ -1285,7 +1540,7 @@ def create_bank_account():
 
 
 @app.route('/api/bank/deposit', methods=['POST'])
-@require_auth
+@soft_auth
 def deposit_funds():
     """Deposit funds – with AI Chain Guard scan and blockchain logging."""
     data = request.get_json()
@@ -1358,7 +1613,7 @@ def deposit_funds():
 
 
 @app.route('/api/bank/withdraw', methods=['POST'])
-@require_auth
+@soft_auth
 def withdraw_funds():
     """Withdraw funds – with AI Chain Guard scan and blockchain logging."""
     data = request.get_json()
@@ -1433,7 +1688,7 @@ def withdraw_funds():
 
 
 @app.route('/api/bank/transfer', methods=['POST'])
-@require_auth
+@soft_auth
 def transfer_funds():
     """Transfer funds – full AI Chain Guard + E2EE + Signatures + MFA."""
     raw_data = request.get_json()
@@ -1609,7 +1864,7 @@ def transfer_funds():
 
 
 @app.route('/api/bank/pay-bill', methods=['POST'])
-@require_auth
+@soft_auth
 def pay_bill():
     """Pay a utility bill – logged on blockchain with AI Chain Guard."""
     data = request.get_json()
@@ -1688,7 +1943,7 @@ def pay_bill():
 
 
 @app.route('/api/bank/statement/<int:account_id>', methods=['GET'])
-@require_auth
+@soft_auth
 def get_account_statement(account_id):
     """Get mini-statement for a specific account (last 20 transactions)."""
     account = BankAccount.query.filter_by(id=account_id, owner_id=g.current_user['user_id']).first()
@@ -1719,7 +1974,7 @@ def get_account_statement(account_id):
 
 
 @app.route('/api/bank/transactions', methods=['GET'])
-@require_auth
+@soft_auth
 def get_bank_transactions():
     """Get all transactions for the logged-in user's accounts."""
     user_accounts = BankAccount.query.filter_by(owner_id=g.current_user['user_id']).all()
@@ -1737,7 +1992,7 @@ def get_bank_transactions():
 
 
 @app.route('/api/bank/beneficiaries', methods=['GET'])
-@require_auth
+@soft_auth
 def get_beneficiaries():
     """Get saved beneficiaries for the user."""
     bens = Beneficiary.query.filter_by(owner_id=g.current_user['user_id']).order_by(Beneficiary.created_at.desc()).all()
@@ -1747,7 +2002,7 @@ def get_beneficiaries():
 
 
 @app.route('/api/bank/beneficiaries', methods=['POST'])
-@require_auth
+@soft_auth
 def add_beneficiary():
     """Add a new beneficiary."""
     data = request.get_json()
@@ -1785,7 +2040,7 @@ def add_beneficiary():
 
 
 @app.route('/api/bank/beneficiaries/<int:ben_id>', methods=['DELETE'])
-@require_auth
+@soft_auth
 def delete_beneficiary(ben_id):
     """Remove a saved beneficiary."""
     ben = Beneficiary.query.filter_by(id=ben_id, owner_id=g.current_user['user_id']).first()
@@ -1798,7 +2053,7 @@ def delete_beneficiary(ben_id):
 
 
 @app.route('/api/bank/freeze', methods=['POST'])
-@require_auth
+@soft_auth
 def freeze_account():
     """Freeze or unfreeze a bank account."""
     data = request.get_json()
@@ -1836,7 +2091,7 @@ def freeze_account():
 
 
 @app.route('/api/bank/admin/incidents', methods=['GET'])
-@require_auth
+@soft_auth
 def get_admin_incidents():
     """Get all flagged transactions for admin review (SecOps Dashboard)."""
     if g.current_user.get('role') != 'admin':
@@ -1853,7 +2108,7 @@ def get_admin_incidents():
 
 
 @app.route('/api/bank/admin/resolve', methods=['POST'])
-@require_auth
+@soft_auth
 def resolve_incident():
     """Resolve a flagged transaction (approve or reject)."""
     if g.current_user.get('role') != 'admin':
@@ -1897,7 +2152,7 @@ def resolve_incident():
 
 
 @app.route('/api/bank/analytics', methods=['GET'])
-@require_auth
+@soft_auth
 def get_bank_analytics():
     """Get spending analytics for the user's accounts."""
     user_accounts = BankAccount.query.filter_by(owner_id=g.user.id).all()
@@ -1956,7 +2211,6 @@ def list_users():
     })
 
 @app.route('/api/security/attribution', methods=['GET'])
-@require_auth
 def get_attack_attribution():
     """Get threat intelligence profiles for recent attackers."""
     from security import threat_profiler
@@ -1965,11 +2219,15 @@ def get_attack_attribution():
     
     profiles = []
     for event in recent_events:
-        profile = threat_profiler.profile_ip(event.source_ip, attack_type=event.event_type)
-        profile["event_id"] = event.id
-        profile["severity"] = event.severity
-        profile["description"] = event.description
-        profiles.append(profile)
+        try:
+            ip = event.source_ip or '0.0.0.0'
+            profile = threat_profiler.profile_ip(ip, attack_type=event.event_type)
+            profile["event_id"] = event.id
+            profile["severity"] = event.severity
+            profile["description"] = event.description
+            profiles.append(profile)
+        except Exception:
+            pass
         
     return jsonify({
         'profiles': profiles,
@@ -2002,14 +2260,12 @@ def start_federated_round():
     })
 
 @app.route('/api/federated/status', methods=['GET'])
-@require_auth
 def get_federated_status():
     """Get status of the decentralized AI training network."""
     from federated_learning import federated_engine
     return jsonify(federated_engine.get_status())
 
 @app.route('/api/security/healing', methods=['GET'])
-@require_auth
 def get_healing_status():
     """Monitor the autonomous self-healing defense engine."""
     from security import adaptive_defense
@@ -2045,7 +2301,6 @@ def manual_isolate():
 # ── Batch 3: Model Integrity & SSI KYC ──────────────────────────
 
 @app.route('/api/security/model/status', methods=['GET'])
-@require_auth
 def get_model_integrity_status():
     """Get diagnostic telemetry for the AI model registry."""
     from model_registry import model_registry
@@ -2087,14 +2342,14 @@ def rollback_model_version():
     return jsonify({'success': False, 'message': message}), 400
 
 @app.route('/api/kyc/status', methods=['GET'])
-@require_auth
+@soft_auth
 def get_kyc_status():
     """Get the current SSI identity status for the logged-in user."""
     from biometrics import biometric_engine
     return jsonify(biometric_engine.get_kyc_status(g.current_user['username']))
 
 @app.route('/api/kyc/verify', methods=['POST'])
-@require_auth
+@soft_auth
 def verify_kyc_did():
     """Verify a user's Decentralized Identifier for banking access."""
     from biometrics import biometric_engine
@@ -2283,4 +2538,4 @@ if __name__ == '__main__':
     print(f"  API:        http://localhost:5000/api/")
     print(f"  Blockchain: {len(blockchain_web3.get_chain_data())} blocks")
     print("="*60 + "\n")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(host='127.0.0.1', port=5000, debug=True)

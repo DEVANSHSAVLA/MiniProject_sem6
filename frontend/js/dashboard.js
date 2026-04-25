@@ -537,7 +537,9 @@ const DashboardPage = {
             }
         ];
 
-        document.getElementById('dash-stats').innerHTML = cards.map((c, i) => `
+        const statsEl = document.getElementById('dash-stats');
+        if (!statsEl) return;
+        statsEl.innerHTML = cards.map((c, i) => `
             <div class="stat-card stat-card-enhanced animate-in stagger-${i + 1}">
                 <div class="stat-icon ${c.color}">${c.icon}</div>
                 <div class="stat-value">${c.value}</div>

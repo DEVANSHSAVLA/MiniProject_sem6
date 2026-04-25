@@ -83,9 +83,11 @@ SOC Monitoring Interface (SecOps)
       ↓
 Zero-Trust Security Layer (RSA-PSS + E2EE)
       ↓
-Identity / KYC Engine (Aadhaar/SSN/OTP)
+Identity / KYC Engine (Aadhaar/SSN/OTP + Google OAuth)
       ↓
-FastAPI Server
+Unified Node.js Gateway (Port 8000 Proxy)
+      ↓
+FastAPI / Flask Server (Port 5000)
       ↓
 Security Monitoring Engine
       ↓
@@ -195,6 +197,8 @@ Smart Contract Storage
 | **Frontend** | HTML, CSS, Vanilla JS | Real-time SOC dashboard with WebSocket streaming |
 | **Cryptography** | PyCryptography & Web Crypto | RSA-PSS, RSA-OAEP, AES-256-GCM primitives |
 | **Wallet Integration** | MetaMask / Internal Key Management | Secure private key signing for non-repudiation |
+| **External Auth** | Google Identity Services | Secure OAuth2/OpenID Connect integration |
+| **Email Service** | Gmail SMTP | Real-world MFA/KYC OTP delivery |
 
 ---
 
@@ -238,16 +242,26 @@ The system replaces conventional perimeter security with a true **Zero-Trust** m
 * **Key Lifecycle Management:** Automatic key generation and server-side public key registration.
 
 ### 4. Advanced High-Fidelity Banking & KYC
-The framework modernizes traditional banking operations with high-fidelity security protocols.
+The framework modernizes traditional banking operations with high-fidelity security protocols and strict, production-ready verification.
 * **Multi-Currency Portfolio:** Native support for INR, USD, EUR, and GBP with dynamic currency rendering.
 * **Region-Aware KYC:** Identity verification automatically adapts to the user's region (Aadhaar for India, SSN for USA, Passport for Intl).
-* **OTP-Based Verification:** Simulated email/SMS authentication flow to verify account holder contact information.
+* **Dual-Channel (Email + SMS) Verification:** Employs a **strict Fail-Fast** verification model. Account creation is blocked unless a real 6-digit OTP is successfully delivered.
+    * **Email:** Dispatched via direct Gmail SMTP.
+    * **SMS (Free Gateway Bridge):** Dispatched via a specialized Gmail-to-SMS bridge supporting major Indian (Airtel, Jio, VI) and US (Verizon, AT&T, T-Mobile) carriers.
+* **Google OAuth2 Integration:** Supports secure, one-click sign-in via Google Identity Services, integrated with the backend for automatic secure user provisioning.
 * **Hashed ID Anchoring:** Identity document numbers are SHA-256 hashed before being anchored to the blockchain for privacy-preserving auditing.
+
+### 5. Live Security Intelligence Ticker
+A persistent, real-time "Security Situational Awareness" ticker at the base of the platform provides continuous updates on:
+* **Blockchain Integrity:** Real-time block height and validation status.
+* **AI Engine Heartbeat:** Current scan rates and threat detection density.
+* **Self-Healing Status:** Monitoring of autonomous mitigation and node isolation events.
 
 **Key Components:**
 * **Ganache RPC Network:** The blockchain operates on a local Ethereum node (`HTTP://127.0.0.1:7545`, Chain ID: 1337).
 * **Solidity Smart Contract (`AIChainGuard.sol`):** A custom smart contract deployed via Remix IDE utilizing `structs` and `mappings` to immutably record AI infrastructure data. The smart contract exposes functions such as `registerModel`, `registerDataset`, and `registerSecurityEvent` to store cryptographic hashes of AI assets and security events. Smart contract events are emitted after each successful transaction to allow backend monitoring systems to verify blockchain confirmations.
 * **Web3.py Integration:** The Python FastAPI backend uses Web3.py to format, digitally sign, and broadcast transactions to the smart contract. Transactions are signed using a dedicated blockchain wallet whose private key is securely stored in environment variables. SHA-256 hashing is used to produce deterministic cryptographic fingerprints of AI assets.
+* **Strict Integration Wiring:** All external integrations (Google Auth, Gmail SMTP, Blockchain) are "straight-wired." Any failure in these upstream services results in immediate, explicit system errors to maintain 100% operational integrity.
 
 **Data meticulously stored on the blockchain via SHA-256 hashes:**
 * Original AI model architecture/weight hashes

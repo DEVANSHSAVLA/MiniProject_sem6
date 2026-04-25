@@ -24,18 +24,55 @@ const App = {
         // Check if user is logged in
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || 'null');
+        const loginTime = localStorage.getItem('login_time');
 
-        if (token && user) {
+        // Check if session has expired (15 minutes = 900,000 ms)
+        const isExpired = loginTime && (Date.now() - parseInt(loginTime) > 15 * 60 * 1000);
+
+        if (token && user && !isExpired) {
             API.token = token;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-shell').style.display = 'flex';
             this.setUser(user);
             this.init();
+            
+            // Start the session countdown from remaining time
+            const remaining = (15 * 60 * 1000) - (Date.now() - parseInt(loginTime));
+            this.startSessionTimer(remaining);
         } else {
             // Show login
+            if (isExpired) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('login_time');
+            }
             document.getElementById('login-screen').innerHTML = LoginPage.render();
             LoginPage.init();
         }
+
+        // Feature: Logout on Refresh (User Request)
+        // By clearing the token on unload, any refresh will force a re-login
+        window.addEventListener('beforeunload', () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('login_time');
+        });
+    },
+
+    startSessionTimer(ms) {
+        if (this.sessionTimeout) clearTimeout(this.sessionTimeout);
+        this.sessionTimeout = setTimeout(() => {
+            this.handleLogout('Session expired after 15 minutes of inactivity.');
+        }, ms);
+    },
+
+    handleLogout(reason = 'Logged out successfully') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('login_time');
+        API.token = null;
+        Toast.info(reason);
+        setTimeout(() => window.location.reload(), 1000);
     },
 
     // ── Initialize Dashboard ────────────────────────────────
@@ -68,14 +105,11 @@ const App = {
         // Phase 3: Extreme Wow Features
         this.initSystemHUD();
         this.initFocusMode();
+        this.initTicker();
 
         // Logout
         document.getElementById('logout-btn')?.addEventListener('click', () => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            API.token = null;
-            Toast.info('Logged out successfully');
-            setTimeout(() => window.location.reload(), 500);
+            this.handleLogout();
         });
 
         // Initial route
@@ -94,14 +128,24 @@ const App = {
 
     // ── Set User UI ─────────────────────────────────────────
     setUser(user) {
-        const initial = (user.username || 'A')[0].toUpperCase();
-        document.querySelectorAll('.sidebar-user-avatar, .user-avatar span').forEach(el => {
-            el.textContent = initial;
-        });
-        const nameEl = document.querySelector('.sidebar-user-name');
-        const roleEl = document.querySelector('.sidebar-user-role');
-        if (nameEl) nameEl.textContent = user.username;
-        if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        const displayName = user.full_name || user.username || 'System User';
+        const initial = displayName[0].toUpperCase();
+        
+        // Update initials
+        const sidebarAvatar = document.getElementById('sidebar-avatar-initial');
+        const headerAvatar = document.getElementById('header-avatar-initial');
+        if (sidebarAvatar) sidebarAvatar.textContent = initial;
+        if (headerAvatar) headerAvatar.textContent = initial;
+        
+        // Update name and role
+        const nameEl = document.getElementById('sidebar-user-name');
+        const roleEl = document.getElementById('sidebar-user-role');
+        
+        if (nameEl) nameEl.textContent = displayName;
+        if (roleEl) {
+            const role = user.role || 'viewer';
+            roleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+        }
     },
 
     // ── Routing ─────────────────────────────────────────────
@@ -376,6 +420,52 @@ const App = {
             }
         } catch (e) {
             // Silent
+        }
+    },
+
+    // ── Live Security Ticker ───────────────────────────────
+    initTicker() {
+        const content = document.getElementById('ticker-content');
+        if (!content) return;
+
+        // Initial update
+        this.refreshTicker();
+
+        // Refresh ticker every 10 seconds
+        setInterval(() => this.refreshTicker(), 10000);
+    },
+
+    async refreshTicker() {
+        const content = document.getElementById('ticker-content');
+        if (!content) return;
+
+        try {
+            const [stats, bcStats] = await Promise.all([
+                API.getSecurityStats(),
+                API.getBlockchainStats()
+            ]);
+
+            const messages = [
+                { text: `System Status: ${stats.unresolved_events > 0 ? 'Threat Detected' : 'All Clear'}`, type: stats.unresolved_events > 0 ? 'danger' : 'success' },
+                { text: `Blockchain: ${bcStats.total_blocks} Blocks Verified (${bcStats.is_valid ? 'Valid' : 'Invalid'})`, type: bcStats.is_valid ? 'success' : 'danger' },
+                { text: `SMS Gateway: Real-time Bridge Active (Dual-Channel)`, type: 'success' },
+                { text: `AI Engine: Real-time scan at ${stats.threat_count || 0} alerts/hr`, type: 'info' },
+                { text: `Self-Healing: ${stats.last_healing_event || 'Monitoring...'}`, type: 'info' },
+                { text: `Security Attribution: Active Defense engaged`, type: 'warning' }
+            ];
+
+            // Triple the items for a seamless infinite loop
+            const html = [...messages, ...messages, ...messages].map(m => `
+                <div class="ticker-item ${m.type === 'danger' ? 'danger' : m.type === 'warning' ? 'warning' : ''}">
+                    <div class="ticker-dot"></div>
+                    <span>${m.text}</span>
+                </div>
+            `).join('');
+
+            content.innerHTML = html;
+        } catch (e) {
+            // Static fallback on error
+            console.error('Ticker update failed', e);
         }
     },
 

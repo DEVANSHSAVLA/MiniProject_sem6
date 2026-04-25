@@ -61,8 +61,8 @@ The AI Chain Guard architecture is a modernized, modular stack utilizing event-d
 
 ### Data Flow Architecture (Figure 2)
 
-1.  **User transaction requests** are received by the API Gateway.
-2.  Requests are authenticated through the **Zero Trust layer**.
+1.  **User transaction requests** are received by the Unified API Gateway (Node.js Proxy).
+2.  Requests are authenticated through the **Zero Trust layer** and Google Identity Services.
 3.  Transaction events are published to the **Kafka event bus** for high-throughput streaming.
 4.  **The AI Risk Engine** processes the transaction features in real-time.
 5.  **Adaptive MFA Challenge**: If a transaction is high-risk (> $10k or high AI score), a multi-factor authentication challenge is triggered.
@@ -78,11 +78,12 @@ The AI Chain Guard architecture is a modernized, modular stack utilizing event-d
 | Component | Technology | Description |
 | :--- | :--- | :--- |
 | **Backend API** | FastAPI / Flask | Asynchronous Python orchestration for high-throughput security nodes. |
+| **API Gateway** | Node.js / Express | Central proxy unifying frontend serving and backend routing (Port 8000). |
 | **Blockchain** | Solidity / Ethereum | Decentralized logic for AI provenance via Ganache. |
 | **Event Streaming**| In-Memory / WebSockets | Real-time event bus for SOC telemetry and fraud alerts. |
 | **ML Engine** | PyTorch / Scikit-Learn | Isolation Forest for high-fidelity anomaly detection. |
 | **Cryptography** | Cryptography (PyCA) | RSA-OAEP, RSA-PSS, AES-256-GCM for Zero-Trust security. |
-| **Identity/KYC** | Region-Aware API | Aadhaar/SSN/Passport validation for secure onboarding. |
+| **Identity/KYC** | Region-Aware API | Aadhaar/SSN/Passport validation with FedCM Google OAuth. |
 | **Honeypot** | TrapEngine (Custom) | Simulated endpoint traps for active threat attribution. |
 | **Automation** | Batch (.bat) | One-click service orchestration for Windows. |
 

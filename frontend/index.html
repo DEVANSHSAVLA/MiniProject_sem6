@@ -13,6 +13,7 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -133,10 +134,10 @@
                     <span>Chain Valid</span>
                 </div>
                 <div class="sidebar-user" id="sidebar-user">
-                    <div class="sidebar-user-avatar">A</div>
+                    <div class="sidebar-user-avatar" id="sidebar-avatar-initial">-</div>
                     <div class="sidebar-user-info">
-                        <div class="sidebar-user-name">admin</div>
-                        <div class="sidebar-user-role">Administrator</div>
+                        <div class="sidebar-user-name" id="sidebar-user-name">Loading...</div>
+                        <div class="sidebar-user-role" id="sidebar-user-role">User</div>
                     </div>
                     <button class="sidebar-logout" id="logout-btn" title="Logout">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -259,7 +260,7 @@
                         </div>
                         <!-- User Menu -->
                         <div class="user-avatar" id="user-avatar">
-                            <span>A</span>
+                            <span id="header-avatar-initial">-</span>
                         </div>
                     </div>
                 </div>
@@ -270,6 +271,34 @@
                 <div class="loading-spinner">
                     <div class="spinner"></div>
                     <p>Initializing secure connection...</p>
+                </div>
+            </div>
+
+            <!-- Security Ticker -->
+            <div class="security-ticker">
+                <div class="ticker-label">Live Intelligence</div>
+                <div class="ticker-content" id="ticker-content">
+                    <div class="ticker-item">
+                        <div class="ticker-dot"></div>
+                        <span>System status: All services operational</span>
+                    </div>
+                    <div class="ticker-item">
+                        <div class="ticker-dot"></div>
+                        <span>Blockchain: 0 blocks verified</span>
+                    </div>
+                    <div class="ticker-item warning">
+                        <div class="ticker-dot"></div>
+                        <span>Security: AI Guard active on port 5000</span>
+                    </div>
+                    <!-- Cloned items for seamless loop -->
+                    <div class="ticker-item">
+                        <div class="ticker-dot"></div>
+                        <span>System status: All services operational</span>
+                    </div>
+                    <div class="ticker-item">
+                        <div class="ticker-dot"></div>
+                        <span>Blockchain: 0 blocks verified</span>
+                    </div>
                 </div>
             </div>
         </main>
@@ -312,24 +341,23 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="/js/audio.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/particles.js"></script>
-    <script src="/js/charts.js"></script>
-    <script src="/js/toast.js"></script>
-    <script src="/js/cmdk.js"></script>
-    <script src="/js/login.js"></script>
-    <script src="/js/dashboard.js"></script>
-    <script src="/js/blockchain.js"></script>
-    <script src="/js/models.js"></script>
-    <script src="/js/security.js"></script>
-    <script src="/js/datasets.js"></script>
-    <script src="/js/settings.js"></script>
-    <script src="/js/lab.js"></script>
-    <script src="/js/crypto.js"></script>
-    <script src="/js/bank.js"></script>
-    <script src="/js/demo.js"></script>
-    <script src="/js/app.js"></script>
+    <script src="/js/api.js?v=1.0.2"></script>
+    <script src="/js/particles.js?v=1.0.2"></script>
+    <script src="/js/charts.js?v=1.0.2"></script>
+    <script src="/js/toast.js?v=1.0.2"></script>
+    <script src="/js/cmdk.js?v=1.0.2"></script>
+    <script src="/js/login.js?v=1.0.2"></script>
+    <script src="/js/dashboard.js?v=1.0.2"></script>
+    <script src="/js/blockchain.js?v=1.0.2"></script>
+    <script src="/js/models.js?v=1.0.2"></script>
+    <script src="/js/security.js?v=1.0.2"></script>
+    <script src="/js/datasets.js?v=1.0.2"></script>
+    <script src="/js/settings.js?v=1.0.2"></script>
+    <script src="/js/lab.js?v=1.0.2"></script>
+    <script src="/js/crypto.js?v=1.0.2"></script>
+    <script src="/js/bank.js?v=1.0.2"></script>
+    <script src="/js/demo.js?v=1.0.2"></script>
+    <script src="/js/app.js?v=1.0.2"></script>
 </body>
 
 </html>

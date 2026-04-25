@@ -212,7 +212,77 @@ code,
     z-index: 1;
 }
 
-/* ── Sidebar ──────────────────────────────────────────── */
+/* ── Live Security Ticker ─────────────────────────────── */
+.security-ticker {
+    height: 30px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--glass-border);
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.ticker-label {
+    padding: 0 12px;
+    background: var(--accent-gradient);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 2;
+    box-shadow: 10px 0 20px rgba(0,0,0,0.5);
+}
+
+.ticker-content {
+    display: flex;
+    white-space: nowrap;
+    animation: tickerLoop 30s linear infinite;
+    padding-left: 20px;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 40px;
+}
+
+.ticker-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-success);
+}
+
+.ticker-item.warning .ticker-dot { background: var(--color-warning); }
+.ticker-item.danger .ticker-dot { background: var(--color-danger); }
+
+@keyframes tickerLoop {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+.main {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding-bottom: 30px; /* Space for ticker */
+    min-width: 0;
+}
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
@@ -563,8 +633,10 @@ code,
     padding: var(--spacing-xl);
     overflow-y: auto;
     overflow-x: hidden;
-    height: calc(100vh - var(--header-height));
+    height: calc(100vh - var(--header-height) - 30px);
     min-width: 0;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
 }
 
 /* ── Loading Spinner ──────────────────────────────────── */

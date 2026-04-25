@@ -3,7 +3,7 @@
  * Handles all communication with the Flask backend.
  */
 const API = {
-    BASE_URL: 'http://localhost:5000/api',
+    BASE_URL: '/api',
     token: null,
 
     async request(endpoint, options = {}) {
@@ -20,7 +20,8 @@ const API = {
         try {
             const response = await fetch(url, {
                 ...options,
-                headers
+                headers,
+                credentials: 'include'
             });
 
             const data = await response.json();
@@ -46,10 +47,17 @@ const API = {
         });
     },
 
-    register(username, email, password, role) {
+    register(username, password, full_name) {
         return this.request('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ username, email, password, role })
+            body: JSON.stringify({ username, password, full_name })
+        });
+    },
+
+    googleLogin(credential) {
+        return this.request('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential })
         });
     },
 
@@ -115,6 +123,28 @@ const API = {
             method: 'POST',
             body: JSON.stringify(data)
         });
+    },
+
+    async uploadDataset(file, metadata = {}) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (metadata.name) formData.append('name', metadata.name);
+        if (metadata.description) formData.append('description', metadata.description);
+        if (metadata.source) formData.append('source', metadata.source);
+        if (metadata.data_type) formData.append('data_type', metadata.data_type);
+
+        const url = `${this.BASE_URL}/datasets/upload`;
+        const headers = {};
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: formData
+        });
+        const data_resp = await response.json();
+        if (!response.ok) throw new Error(data_resp.error || `HTTP ${response.status}`);
+        return data_resp;
     },
 
     // Blockchain
