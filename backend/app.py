@@ -7,6 +7,22 @@ All API routes, middleware, and request processing.
 import os
 import sys
 
+# Load .env file for environment variables (GOOGLE_CLIENT_ID, etc.)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+except ImportError:
+    # Fallback: manually read .env if python-dotenv is not installed
+    _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if os.path.exists(_env_path):
+        with open(_env_path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _key, _val = _line.split('=', 1)
+                    _val = _val.strip().strip('"').strip("'")
+                    os.environ.setdefault(_key.strip(), _val)
+
 # Ensure backend directory is in path for relative imports
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 if cur_dir not in sys.path:
@@ -458,28 +474,56 @@ def login():
 
 @app.route('/api/auth/google', methods=['POST'])
 def google_login():
-    """Authenticate via Google Sign-In ID token."""
-    from google.oauth2 import id_token
-    from google.auth.transport import requests as google_requests
-
+    """Authenticate via Google Sign-In (supports both ID token and OAuth2 access token)."""
     data = request.get_json()
-    credential = data.get('credential')
-    if not credential:
-        return jsonify({'error': 'Google credential token is required'}), 400
+    credential = data.get('credential')      # Legacy: JWT id_token from GSI
+    access_token = data.get('access_token')   # New: OAuth2 access token
 
-    print(f"[AUTH] Google Login Attempt. Credential length: {len(credential) if credential else 0}")
-    
-    client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
-    print(f"[AUTH] Using Client ID: {client_id}")
+    email = None
+    name = None
 
-    try:
-        idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
-        email = idinfo.get('email')
-        name = idinfo.get('name', email.split('@')[0])
-        print(f"[AUTH] Token Verified. Email: {email}, Name: {name}")
-    except Exception as e:
-        print(f"[AUTH] Token Verification FAILED: {str(e)}")
-        return jsonify({'error': f'Invalid Google token: {str(e)}'}), 401
+    if access_token:
+        # ── OAuth2 Access Token Flow ──
+        # Verify by calling Google's userinfo endpoint
+        import requests as http_requests
+        print(f"[AUTH] Google OAuth2 Access Token flow. Token length: {len(access_token)}")
+        try:
+            resp = http_requests.get(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10
+            )
+            if resp.status_code != 200:
+                print(f"[AUTH] Google userinfo failed: HTTP {resp.status_code}")
+                return jsonify({'error': 'Invalid Google access token'}), 401
+            userinfo = resp.json()
+            email = userinfo.get('email')
+            name = userinfo.get('name', email.split('@')[0] if email else 'User')
+            print(f"[AUTH] OAuth2 Verified. Email: {email}, Name: {name}")
+        except Exception as e:
+            print(f"[AUTH] OAuth2 Verification FAILED: {str(e)}")
+            return jsonify({'error': f'Google verification failed: {str(e)}'}), 401
+
+    elif credential:
+        # ── Legacy GSI ID Token Flow ──
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        print(f"[AUTH] Google ID Token flow. Credential length: {len(credential)}")
+        client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+        print(f"[AUTH] Using Client ID: {client_id}")
+        try:
+            idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+            email = idinfo.get('email')
+            name = idinfo.get('name', email.split('@')[0])
+            print(f"[AUTH] Token Verified. Email: {email}, Name: {name}")
+        except Exception as e:
+            print(f"[AUTH] Token Verification FAILED: {str(e)}")
+            return jsonify({'error': f'Invalid Google token: {str(e)}'}), 401
+    else:
+        return jsonify({'error': 'Google credential or access_token is required'}), 400
+
+    if not email:
+        return jsonify({'error': 'Could not retrieve email from Google'}), 401
 
     # Find or create user
     user = User.query.filter_by(email=email).first()

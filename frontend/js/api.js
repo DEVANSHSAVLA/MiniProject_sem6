@@ -54,10 +54,10 @@ const API = {
         });
     },
 
-    googleLogin(credential) {
+    googleLogin(credential, access_token = null) {
         return this.request('/auth/google', {
             method: 'POST',
-            body: JSON.stringify({ credential })
+            body: JSON.stringify({ credential, access_token })
         });
     },
 

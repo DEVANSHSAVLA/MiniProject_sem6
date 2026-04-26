@@ -20,11 +20,7 @@ console.log('\n' + '='.repeat(60));
 console.log('  AI CHAIN GUARD - MASTER GATEWAY (FINAL)');
 console.log('='.repeat(60));
 
-// Fix: Cross-Origin-Opener-Policy for Google Login & popups
-app.use((req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-    next();
-});
+
 
 /**
  * 1. API PROXY — mounted at root with a filter

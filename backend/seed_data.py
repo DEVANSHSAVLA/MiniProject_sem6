@@ -29,11 +29,11 @@ def seed():
 
         print("[*] Seeding users...")
         users = [
-            User(username='admin', email='admin@aichain.io', password_hash=hash_password('admin123'), role='admin', trust_score=98.5),
-            User(username='dr.chen', email='chen@research.edu', password_hash=hash_password('chen123'), role='researcher', trust_score=92.3),
-            User(username='sarah_ml', email='sarah@mlops.com', password_hash=hash_password('sarah123'), role='researcher', trust_score=88.7),
-            User(username='alex_viewer', email='alex@company.com', password_hash=hash_password('alex123'), role='viewer', trust_score=95.1),
-            User(username='maya_ds', email='maya@datascience.org', password_hash=hash_password('maya123'), role='researcher', trust_score=91.0),
+            User(username='admin', email='admin@aichain.io', full_name='Administrator', password_hash=hash_password('admin123'), role='admin', trust_score=98.5),
+            User(username='dr.chen', email='chen@research.edu', full_name='Dr. Wei Chen', password_hash=hash_password('chen123'), role='researcher', trust_score=92.3),
+            User(username='sarah_ml', email='sarah@mlops.com', full_name='Sarah Mitchell', password_hash=hash_password('sarah123'), role='researcher', trust_score=88.7),
+            User(username='alex_viewer', email='alex@company.com', full_name='Alex Rodriguez', password_hash=hash_password('alex123'), role='viewer', trust_score=95.1),
+            User(username='maya_ds', email='maya@datascience.org', full_name='Maya Desai', password_hash=hash_password('maya123'), role='researcher', trust_score=91.0),
         ]
         for u in users:
             db.session.add(u)
